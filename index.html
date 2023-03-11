@@ -1,67 +1,178 @@
 <!DOCTYPE html>
 <html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>고양이 가라사대</title>
-  </head>
-  <style>
-    body {
-      text-align: center;
+
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>고양이 가라사대</title>
+</head>
+<style>
+  body {
+    text-align: center;
+  }
+
+  .main-card button {
+    position: relative;
+    left: -45px;
+    bottom: 15px;
+  }
+
+  .favorites {
+    list-style: none;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+</style>
+
+<body>
+  <div id="app"></div>
+
+  <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+  <script type="text/babel">
+
+    //1. localStorage가 string으로만 받는걸 생각해서 ... 만든 함수
+    const jsonLocalStorage = {
+      setItem: (key, value) => {
+        localStorage.setItem(key, JSON.stringify(value));
+      },
+      getItem: (key) => {
+        return JSON.parse(localStorage.getItem(key));
+      },
+    };
+
+    const Title = (props) => {
+      return <h1>{props.children}</h1>;
+    };
+
+    const Form = ({ updateMainCat }) => {
+      const includesHangul = (text) => /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/i.test(text);
+      const [value, setValue] = React.useState("");
+      const [errorMessage, setErrorMessage] = React.useState("");
+
+      function handleInputChange(e) {
+        const userValue = e.target.value;
+        setErrorMessage("");
+        if (includesHangul(userValue)) {
+          setErrorMessage("한글은 입력할 수 없습니다.");
+        }
+        setValue(userValue.toUpperCase());
+      }
+
+      function handleFormSubmit(e) {
+        e.preventDefault();
+        setErrorMessage("");
+
+        if (value === "") {
+          setErrorMessage("빈 값으로 만들 수 없습니다.");
+          return;
+        }
+        updateMainCat();
+      }
+
+      return (
+        <form onSubmit={handleFormSubmit}>
+          <input
+            type="text"
+            name="name"
+            placeholder="영어 대사를 입력해주세요"
+            value={value}
+            onChange={handleInputChange}
+          />
+          <button type="submit">생성</button>
+          <p style={{ color: "red" }}>{errorMessage}</p>
+        </form>
+      );
+    };
+
+    function CatItem(props) {
+      return (
+        <li>
+          <img src={props.img} style={{ width: "150px" }} />
+        </li>
+      );
     }
-    .main-card button {
-      position: relative;
-      left: -45px;
-      bottom: 15px;
+
+    function Favorites({ favorites }) {
+      return (
+        <ul className="favorites">
+          {favorites.map((cat) => (
+            <CatItem img={cat} key={cat} />
+          ))}
+        </ul>
+      );
     }
-    .favorites {
-      list-style: none;
-      display: flex;
-      justify-content: center;
-      flex-wrap: wrap;
-      gap: 15px;
-    }
-    .favorites img {
-      width: 150px;
-    }
-  </style>
-  <body>
-    <h1>1번째 고양이 가라사대</h1>
-    <form>
-      <input type="text" name="name" placeholder="영어 대사를 입력해주세요" />
-      <button type="submit">생성</button>
-    </form>
-    <div class="main-card">
-      <img
-        src="https://cataas.com/cat/HSENVDU4ZMqy7KQ0/says/react"
-        alt="고양이"
-        width="400"
-      />
-      <button>🤍</button>
-    </div>
-    <ul class="favorites">
-      <li>
-        <img
-          src="https://cataas.com/cat/HSENVDU4ZMqy7KQ0/says/react"
-          alt="고양이"
-        />
-      </li>
-      <li>
-        <img
-          src="https://cataas.com/cat/HSENVDU4ZMqy7KQ0/says/react"
-          alt="고양이"
-        />
-      </li>
-      <li>
-        <img
-          src="https://cataas.com/cat/HSENVDU4ZMqy7KQ0/says/react"
-          alt="고양이"
-        />
-      </li>
-    </ul>
-    <script>
-      console.log("야옹");
-    </script>
-  </body>
+
+    const MainCard = ({ img, onHeartClick }) => {
+      return (
+        <div className="main-card">
+          <img src={img} alt="고양이" width="400" />
+          <button onClick={onHeartClick}>🤍</button>
+        </div>
+      );
+    };
+
+    const App = () => {
+      const CAT1 =
+        "https://cataas.com/cat/HSENVDU4ZMqy7KQ0/says/react";
+      const CAT2 =
+        "https://cataas.com/cat/BxqL2EjFmtxDkAm2/says/inflearn";
+      const CAT3 =
+        "https://cataas.com/cat/18MD6byVC1yKGpXp/says/JavaScript";
+
+      //1 jsonLocalStorage로 Number로 변환 안해도 됨.
+      const [counter, setCounter] = React.useState(
+        jsonLocalStorage.getItem("counter")
+      );
+      const [mainCat, setMainCat] = React.useState(CAT1);
+
+      //2 초기값을 favorites로 한다. 당연하지만 선호그림목록의 새로고침 방지다
+      const [favorites, setFavorites] = React.useState(
+        //없을 떄 초기값을 빈 배열로 해줘야 에러가 안남.
+        //null을 map할 수는 없으니까
+        //favorites함수 보면 됨.
+        jsonLocalStorage.getItem("favorites") || []
+      );
+
+      function updateMainCat() {
+        //+A 뭔가 계속 메인캣이 CAT2로만 업데이트 되는데 이거 뒤에서 배우니까 너무 신경쓰지말자(new CAT)
+        setMainCat(CAT2);
+        const nextCounter = counter + 1;
+        setCounter(nextCounter);
+        jsonLocalStorage.setItem("counter", nextCounter);
+      }
+
+      //counter올라가는 것과 마찬가지로 
+      //하트누르면 
+      function handleHeartClick() {
+        {/*
+        원래는 기존의 data+ CAT3. 즉 좋아요 누르면 무조건 CAT3가 담기게 했지만
+        이번에는 mainCat
+        메인캣을 저장할 수 있도록 지정.*/ }
+        const nextFavorites = [...favorites, mainCat];
+        setFavorites(nextFavorites);
+        {/*또한 그림도 카운터와 같이 새로고침 방지위해서 Storage이용하자.*/ }
+        jsonLocalStorage.setItem("favorites", nextFavorites);
+      }
+
+      return (
+        <div>
+          <Title>{counter}번째 고양이 가라사대</Title>
+          <Form updateMainCat={updateMainCat} />
+          <MainCard img={mainCat} onHeartClick={handleHeartClick} />
+          <Favorites favorites={favorites} />
+        </div>
+      );
+    };
+
+    const 여기다가그려 = document.querySelector("#app");
+
+    ReactDOM.render(<App />, 여기다가그려);
+  </script>
+</body>
+
 </html>
