@@ -34,8 +34,6 @@
   <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
   <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
   <script type="text/babel">
-
-    //1. localStorage가 string으로만 받는걸 생각해서 ... 만든 함수
     const jsonLocalStorage = {
       setItem: (key, value) => {
         localStorage.setItem(key, JSON.stringify(value));
@@ -43,6 +41,15 @@
       getItem: (key) => {
         return JSON.parse(localStorage.getItem(key));
       },
+    };
+
+    const fetchCat = async (text) => {
+      const OPEN_API_DOMAIN = "https://cataas.com";
+      const response = await fetch(
+        `${OPEN_API_DOMAIN}/cat/says/${text}?json=true`
+      );
+      const responseJson = await response.json();
+      return `${OPEN_API_DOMAIN}/${responseJson.url}`;
     };
 
     const Title = (props) => {
@@ -71,7 +78,7 @@
           setErrorMessage("빈 값으로 만들 수 없습니다.");
           return;
         }
-        updateMainCat();
+        updateMainCat(value);
       }
 
       return (
@@ -98,6 +105,10 @@
     }
 
     function Favorites({ favorites }) {
+      if (favorites.length === 0) {
+        return <div>사진 위 하트를 눌러 고양이 사진을 저장해봐요!</div>;
+      }
+
       return (
         <ul className="favorites">
           {favorites.map((cat) => (
@@ -107,11 +118,12 @@
       );
     }
 
-    const MainCard = ({ img, onHeartClick }) => {
+    const MainCard = ({ img, onHeartClick, alreadyFavorite }) => {
+      const heartIcon = alreadyFavorite ? "💖" : "🤍";
       return (
         <div className="main-card">
           <img src={img} alt="고양이" width="400" />
-          <button onClick={onHeartClick}>🤍</button>
+          <button onClick={onHeartClick}>{heartIcon}</button>
         </div>
       );
     };
@@ -124,46 +136,72 @@
       const CAT3 =
         "https://cataas.com/cat/18MD6byVC1yKGpXp/says/JavaScript";
 
-      //1 jsonLocalStorage로 Number로 변환 안해도 됨.
+      //1. [성능개선] useState의 초기값을 함수로 지정하여, 캐싱사용.
+      // 불필요한 localStorage접근 하지 않음.
+      // state,ui변경시 재 렌더링 되는데, 이 때마다 localStorage에 접근하는 것이아닌
+      // 한 번만 접근하고, 이후로는 캐시데이터를 사용한다.(초기값 지정이기에 매번 똑같은 작업일 것이다)
       const [counter, setCounter] = React.useState(
-        jsonLocalStorage.getItem("counter")
+        () => {
+          return jsonLocalStorage.getItem("counter");
+        }
       );
       const [mainCat, setMainCat] = React.useState(CAT1);
 
-      //2 초기값을 favorites로 한다. 당연하지만 선호그림목록의 새로고침 방지다
+      //1
       const [favorites, setFavorites] = React.useState(
-        //없을 떄 초기값을 빈 배열로 해줘야 에러가 안남.
-        //null을 map할 수는 없으니까
-        //favorites함수 보면 됨.
-        jsonLocalStorage.getItem("favorites") || []
+        () => {
+          return jsonLocalStorage.getItem("favorites") || []
+        }
       );
 
-      function updateMainCat() {
-        //+A 뭔가 계속 메인캣이 CAT2로만 업데이트 되는데 이거 뒤에서 배우니까 너무 신경쓰지말자(new CAT)
-        setMainCat(CAT2);
-        const nextCounter = counter + 1;
-        setCounter(nextCounter);
-        jsonLocalStorage.setItem("counter", nextCounter);
+      const alreadyFavorite = favorites.includes(mainCat);
+
+      async function setInitialCat() {
+        const newCat = await fetchCat("First cat");
+        console.log(newCat);
+        setMainCat(newCat);
       }
 
-      //counter올라가는 것과 마찬가지로 
-      //하트누르면 
+      React.useEffect(() => {
+        setInitialCat();
+      }, []);
+
+      //2 빠른 버튼 클릭시 setCounter와 counter의 미스매치
+      async function updateMainCat(value) {
+        const newCat = await fetchCat(value);
+
+        setMainCat(newCat);
+        //const nextCounter = counter + 1;
+        //setCounter(nextCounter);
+
+        //prev 이전 카운터
+        //함수 형태로 인자를 넘기는 것을 생각해보자.
+        //https://blog.naver.com/corrosion521/223050388701
+        setCounter((prev) => {
+          const nextCounter = prev + 1;
+          jsonLocalStorage.setItem("counter", nextCounter);
+          return nextCounter;
+        })
+
+      }
+
       function handleHeartClick() {
-        {/*
-        원래는 기존의 data+ CAT3. 즉 좋아요 누르면 무조건 CAT3가 담기게 했지만
-        이번에는 mainCat
-        메인캣을 저장할 수 있도록 지정.*/ }
         const nextFavorites = [...favorites, mainCat];
         setFavorites(nextFavorites);
-        {/*또한 그림도 카운터와 같이 새로고침 방지위해서 Storage이용하자.*/ }
         jsonLocalStorage.setItem("favorites", nextFavorites);
       }
 
+      const counterTitle = counter === null ? "" : counter + "번째 ";
+
       return (
         <div>
-          <Title>{counter}번째 고양이 가라사대</Title>
+          <Title>{counterTitle}고양이 가라사대</Title>
           <Form updateMainCat={updateMainCat} />
-          <MainCard img={mainCat} onHeartClick={handleHeartClick} />
+          <MainCard
+            img={mainCat}
+            onHeartClick={handleHeartClick}
+            alreadyFavorite={alreadyFavorite}
+          />
           <Favorites favorites={favorites} />
         </div>
       );
