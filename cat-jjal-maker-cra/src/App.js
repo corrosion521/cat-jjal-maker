@@ -223,7 +223,7 @@ const App = () => {
       그래서 3항연산자 이용해서 counter가 1인 경우를 생각했다.
       참고로 return문 안에서는 3항연산자는 가능하지만, if는 안됨.
       */}
-      {(counter == 1) ? <Title>고양이 가라사대</Title> : <Title>{counter}번째 고양이 가라사대</Title>}
+      {(counter == 1) ? <Title>야옹이</Title> : <Title>{counter}번째 야옹</Title>}
       <Form updateMainCat={updateMainCat} />
       <MainCard
         img={mainCat}
