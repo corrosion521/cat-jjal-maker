@@ -32,9 +32,9 @@ const App = () => {
       </nav>
       <Routes>
         {/*Link를 클릭하는 순간 to와 path가 같은 Route를 찾음  */}
-        <Route path="/" element={<Home />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/makecat" element={<MakeCat />} />
+        <Route path="/cat-jjal-maker" element={<Home />} />
+        <Route path="/cat-jjal-maker/about" element={<About />} />
+        <Route path="/cat-jjal-maker/makecat" element={<MakeCat />} />
       </Routes>
 
 
